@@ -5,19 +5,58 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Autofac;
-using Autofac.Core;
+using Fclp;
 
 namespace TagsCloudVisualization
 {
-    public static class Program
+    internal class TagsCloudArgs
     {
-        private static readonly int Width = Screen.PrimaryScreen.Bounds.Width;
-        private static readonly int Height = Screen.PrimaryScreen.Bounds.Height;
+        public int WordsCount { get; set; }
+        public string Source { get; set; }
+        public string Destination { get; set; }
+    }
 
-        public static void Main()
+    public static partial class Program
+    {
+        private static readonly int width = Screen.PrimaryScreen.Bounds.Width;
+        private static readonly int height = Screen.PrimaryScreen.Bounds.Height;
+
+        public static void Main(string[] arg)
+        {
+            var parser = new FluentCommandLineParser<TagsCloudArgs>();
+
+            parser.SetupHelp("h", "help").Callback(help => Console.WriteLine(help)).UseForEmptyArgs();
+
+            parser.Setup(args => args.Source)
+                .As("src")
+                .WithDescription("source file with text")
+                .Required();
+
+            parser.Setup(args => args.Destination)
+                .As("dest")
+                .WithDescription("file where cloud would be saved")
+                .Required();
+
+            parser.Setup(args => args.WordsCount)
+                .As('c', "count")
+                .WithDescription("number of words which cloud would consists of")
+                .SetDefault(100);
+
+            var result = parser.Parse(arg);
+            if (result.HelpCalled) return;
+            if (result.HasErrors)
+            {
+                Console.WriteLine(result.ErrorText);
+                return;
+            }
+
+            Run(parser.Object);
+        }
+
+        private static void Run(TagsCloudArgs args)
         {
             var builder = new ContainerBuilder();
-            builder.Register(c => new Point(Width / 2, Height / 2));
+            builder.Register(c => new Point(width / 2, height / 2));
             builder.RegisterType<Spiral>().As<IPointsGenerator>();
             builder.RegisterType<CircularCloudLayouter>().As<IRectangleLayouter>();
             builder.Register(c => new TagsCloudVisualizer(
@@ -28,12 +67,12 @@ namespace TagsCloudVisualization
             builder.RegisterType<SimpleWordStatistics>().As<IWordStatistics>();
             var container = builder.Build();
 
-            DrawWords(100, container);
+            DrawWords(args, container);
         }
 
-        public static void DrawWords(int count, IContainer container)
+        private static void DrawWords(TagsCloudArgs args, IContainer container)
         {
-            IEnumerable<Word> words = GetWords(container).Take(count);
+            var words = GetWords(File.ReadLines(args.Source), container).Take(args.WordsCount);
 
             var layouter = container.Resolve<IRectangleLayouter>();
             var visualizer = container.Resolve<TagsCloudVisualizer>();
@@ -43,13 +82,12 @@ namespace TagsCloudVisualization
                 return word;
             });
 
-            var bitmap = visualizer.DrawWords(Width, Height, words);
-            bitmap.Save(@"..\..\Examples\WarAndPeaceCloud.png");
+            var bitmap = visualizer.DrawWords(width, height, words);
+            bitmap.Save(args.Destination);
         }
 
-        public static IEnumerable<Word> GetWords(IContainer container)
+        public static IEnumerable<Word> GetWords(IEnumerable<string> lines, IContainer container)
         {
-            var lines = File.ReadLines(@"data\war_and_peace.txt");
             var statistics = container.Resolve<IWordStatistics>();
 
             var mostFrequentWords = statistics.MakeStatistics(lines)
@@ -63,27 +101,6 @@ namespace TagsCloudVisualization
                 .Select(e => measurer.MeasureText(e.word, e.weight));
 
             return words;
-        }
-
-        public interface IWordStatistics
-        {
-            Dictionary<string, int> MakeStatistics(IEnumerable<string> lines);
-        }
-
-        public class SimpleWordStatistics : IWordStatistics
-        {
-            private static readonly char[] wordDelimiters = { '.', ',', ';', ' ', ':', '(', ')', '[', ']', '\'', '"', '?', '!', '–', '\n' };
-
-            public Dictionary<string, int> MakeStatistics(IEnumerable<string> lines)
-            {
-                return lines
-                    .SelectMany(line => line.Split(wordDelimiters, StringSplitOptions.RemoveEmptyEntries))
-                    .Where(w => w.Length > 3)
-                    .Select(w => w.ToLower())
-                    .GroupBy(w => w)
-                    .ToDictionary(group => group.Key, group => group.Count());
-
-            }
         }
     }
 }

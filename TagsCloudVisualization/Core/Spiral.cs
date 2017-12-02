@@ -27,8 +27,4 @@ namespace TagsCloudVisualization
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
-
-    public interface IPointsGenerator : IEnumerable<Point>
-    {
-    }
 }

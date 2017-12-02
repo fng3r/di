@@ -6,26 +6,6 @@ using System.Text.RegularExpressions;
 
 namespace TagsCloudVisualization
 {
-    public interface IWordsLemmatizer
-    {
-        IEnumerable<Lexem> LemmatizeWords(IEnumerable<string> words);
-    }
-
-    public enum PartOfSpeech
-    {
-        Noun,
-        Adjective,
-        Verb,
-        Adverb,
-        Pronoun,
-        Numeral,
-        Conjunction,
-        Preposition,
-        Interjection,
-        Particle,
-        CompositePart
-    }
-
     public class MyStemWordsLemmatizer : IWordsLemmatizer
     {
         private readonly string tempFile = "tempFile.txt";

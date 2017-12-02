@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Autofac;
-using Autofac.Core;
 using Fclp;
+using TagsCloudVisualization;
+using TagsCloudVisualization.IO;
 
 namespace TagsCloudVisualization
 {
@@ -43,7 +43,7 @@ namespace TagsCloudVisualization
                 .As("dest")
                 .WithDescription("file where cloud would be saved")
                 //.Required()
-                .SetDefault("cloud.png");
+                .SetDefault("cloud.jpg");
 
             parser.Setup(args => args.WordsCount)
                 .As('c', "count")
@@ -89,6 +89,7 @@ namespace TagsCloudVisualization
             builder.RegisterType<Spiral>().As<IPointsGenerator>();
             builder.RegisterType<CircularCloudLayouter>().As<IRectangleLayouter>();
 
+            builder.RegisterType<TxtWordReader>().WithParameter("filename", args.Source).As<IWordReader>();
             builder.Register(c => new TextMeasurer(args.FontFamily, args.FontSize));
             builder.Register(c => new TagsCloudVisualizer(
                 config => config
@@ -107,7 +108,10 @@ namespace TagsCloudVisualization
         private static void DrawWords(TagsCloudArgs args, IContainer container)
         {
             var lines = File.ReadLines(args.Source);
-            var words = GetWords(lines, container).Take(args.WordsCount);
+            var wordReader = container.Resolve<IWordReader>();
+            var statistics = container.Resolve<IWordStatistics>();
+            var measurer = container.Resolve<TextMeasurer>();
+            var words = GetTags(wordReader, statistics, measurer).Take(args.WordsCount);
 
             var layouter = container.Resolve<IRectangleLayouter>();
             var visualizer = container.Resolve<TagsCloudVisualizer>();
@@ -121,21 +125,17 @@ namespace TagsCloudVisualization
             bitmap.Save(args.Destination);
         }
 
-        public static IEnumerable<CloudTag> GetWords(IEnumerable<string> lines, IContainer container)
+        public static IEnumerable<CloudTag> GetTags(IWordReader wordReader, IWordStatistics statistics, TextMeasurer measurer)
         {
-            var statistics = container.Resolve<IWordStatistics>();
-
-            var mostFrequentWords = statistics.MakeStatistics(lines)
-                .OrderByDescending(pair => pair.Value)
-                .ToDictionary(pair => pair.Key, pair => pair.Value);
+            var words = wordReader.ReadWords();
+            var mostFrequentWords = statistics.MakeStatistics(words);
             var largestCount = mostFrequentWords.First().Value;
 
-            var measurer = container.Resolve<TextMeasurer>();
-            var words = mostFrequentWords
+            var tags = mostFrequentWords
                 .Select(pair => (word: pair.Key, weight: (double)pair.Value / largestCount))
                 .Select(e => measurer.MeasureText(e.word, e.weight));
 
-            return words;
+            return tags;
         }
     }
 }

@@ -73,6 +73,10 @@
     <Compile Include="Core\IPointsGenerator.cs" />
     <Compile Include="Extensions\RectangleExtensions.cs" />
     <Compile Include="Core\IRectangleLayouter.cs" />
+    <Compile Include="IO\IWordReader.cs" />
+    <Compile Include="IO\TxtWordReader.cs" />
+    <Compile Include="Visualization\CloudTag.cs" />
+    <Compile Include="Visualization\TagsCloudVisualizerConfiguration.cs" />
     <Compile Include="WordStatistics\IWordsLemmatizer.cs" />
     <Compile Include="WordStatistics\IWordStatistics.cs" />
     <Compile Include="WordStatistics\Lexem.cs" />

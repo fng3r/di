@@ -9,7 +9,6 @@ namespace TagsCloudVisualization
     {
         public class WordStatistics : IWordStatistics
         {
-            private static readonly char[] wordDelimiters = { '.', ',', ';', ' ', ':', '(', ')', '[', ']', '\'', '"', '?', '!', '–', '\n' };
             private readonly IWordsLemmatizer lemmatizer;
             private readonly HashSet<PartOfSpeech> allowedPartsOfSpeech = new HashSet<PartOfSpeech>
             {
@@ -20,12 +19,9 @@ namespace TagsCloudVisualization
 
             public WordStatistics(IWordsLemmatizer lemmatizer) => this.lemmatizer = lemmatizer;
 
-            public Dictionary<string, int> MakeStatistics(IEnumerable<string> lines)
+            public Dictionary<string, int> MakeStatistics(IEnumerable<string> words)
             {
-
-                var words = lines.SelectMany(line => line.Split(wordDelimiters, StringSplitOptions.RemoveEmptyEntries));
-
-                //TODO exclude boring words and words with specific PoS
+                //TODO exclude boring words
                 return lemmatizer.LemmatizeWords(words)
                     .Where(l => l.Lemma.Length > 3)
                     .Where(l => allowedPartsOfSpeech.Contains(l.PartOfSpeech))

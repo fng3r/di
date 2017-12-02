@@ -25,7 +25,7 @@ namespace TagsCloudVisualization
             return bitmap;
         }
 
-        public Bitmap DrawWords(int width, int height, IEnumerable<Word> words)
+        public Bitmap DrawWords(int width, int height, IEnumerable<CloudTag> words)
         {
             var bitmap = new Bitmap(width, height);
             var graphics = Graphics.FromImage(bitmap);

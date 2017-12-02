@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Autofac;
+using Autofac.Core;
 using Fclp;
 
 namespace TagsCloudVisualization
@@ -14,6 +16,10 @@ namespace TagsCloudVisualization
         public int WordsCount { get; set; }
         public string Source { get; set; }
         public string Destination { get; set; }
+        public int FontSize { get; set; }
+        public string FontFamily { get; set; }
+        public string ForegroundColor { get; set; }
+        public string BackgroundColor { get; set; }
     }
 
     public static partial class Program
@@ -25,22 +31,44 @@ namespace TagsCloudVisualization
         {
             var parser = new FluentCommandLineParser<TagsCloudArgs>();
 
-            parser.SetupHelp("h", "help").Callback(help => Console.WriteLine(help)).UseForEmptyArgs();
+            parser.SetupHelp("h", "help").Callback(help => Console.WriteLine(help));
 
             parser.Setup(args => args.Source)
                 .As("src")
                 .WithDescription("source file with text")
-                .Required();
+                //.Required()
+                .SetDefault(@"data\war_and_peace.txt");
 
             parser.Setup(args => args.Destination)
                 .As("dest")
                 .WithDescription("file where cloud would be saved")
-                .Required();
+                //.Required()
+                .SetDefault("cloud.png");
 
             parser.Setup(args => args.WordsCount)
                 .As('c', "count")
                 .WithDescription("number of words which cloud would consists of")
                 .SetDefault(100);
+
+            parser.Setup(args => args.FontSize)
+                .As("font-size")
+                .WithDescription("max font size of tags in the cloud")
+                .SetDefault(80);
+
+            parser.Setup(args => args.FontFamily)
+                .As("font-family")
+                .WithDescription("font family for tags in the cloud")
+                .SetDefault("Arial");
+
+            parser.Setup(args => args.ForegroundColor)
+                .As("fg")
+                .WithDescription("foreground color")
+                .SetDefault("OrangeRed");
+
+            parser.Setup(args => args.BackgroundColor)
+                .As("bg")
+                .WithDescription("background color")
+                .SetDefault("LightSteelBlue");
 
             var result = parser.Parse(arg);
             if (result.HelpCalled) return;
@@ -56,15 +84,21 @@ namespace TagsCloudVisualization
         private static void Run(TagsCloudArgs args)
         {
             var builder = new ContainerBuilder();
+
             builder.Register(c => new Point(width / 2, height / 2));
             builder.RegisterType<Spiral>().As<IPointsGenerator>();
             builder.RegisterType<CircularCloudLayouter>().As<IRectangleLayouter>();
+
+            builder.Register(c => new TextMeasurer(args.FontFamily, args.FontSize));
             builder.Register(c => new TagsCloudVisualizer(
                 config => config
-                    .SetBackground(Color.LightSteelBlue)
-                    .SetForeground(Color.OrangeRed)
+                    .SetBackground(Color.FromName(args.BackgroundColor))
+                    .SetForeground(Color.FromName(args.ForegroundColor))
             ));
-            builder.RegisterType<SimpleWordStatistics>().As<IWordStatistics>();
+
+            builder.RegisterType<MyStemWordsLemmatizer>().WithParameter("mystemPath", "mystem.exe").As<IWordsLemmatizer>();
+            builder.RegisterType<WordStatistics>().As<IWordStatistics>();
+
             var container = builder.Build();
 
             DrawWords(args, container);
@@ -72,7 +106,8 @@ namespace TagsCloudVisualization
 
         private static void DrawWords(TagsCloudArgs args, IContainer container)
         {
-            var words = GetWords(File.ReadLines(args.Source), container).Take(args.WordsCount);
+            var lines = File.ReadLines(args.Source);
+            var words = GetWords(lines, container).Take(args.WordsCount);
 
             var layouter = container.Resolve<IRectangleLayouter>();
             var visualizer = container.Resolve<TagsCloudVisualizer>();
@@ -86,7 +121,7 @@ namespace TagsCloudVisualization
             bitmap.Save(args.Destination);
         }
 
-        public static IEnumerable<Word> GetWords(IEnumerable<string> lines, IContainer container)
+        public static IEnumerable<CloudTag> GetWords(IEnumerable<string> lines, IContainer container)
         {
             var statistics = container.Resolve<IWordStatistics>();
 
@@ -95,7 +130,7 @@ namespace TagsCloudVisualization
                 .ToDictionary(pair => pair.Key, pair => pair.Value);
             var largestCount = mostFrequentWords.First().Value;
 
-            var measurer = new TextMeasurer();
+            var measurer = container.Resolve<TextMeasurer>();
             var words = mostFrequentWords
                 .Select(pair => (word: pair.Key, weight: (double)pair.Value / largestCount))
                 .Select(e => measurer.MeasureText(e.word, e.weight));

@@ -78,12 +78,12 @@
     <Compile Include="Visualization\CloudTag.cs" />
     <Compile Include="Visualization\TagsCloudVisualizerConfiguration.cs" />
     <Compile Include="WordStatistics\IWordsLemmatizer.cs" />
-    <Compile Include="WordStatistics\IWordStatistics.cs" />
+    <Compile Include="WordStatistics\IStatisticsMaker.cs" />
     <Compile Include="WordStatistics\Lexem.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WordStatistics\PartOfSpeech.cs" />
-    <Compile Include="WordStatistics\WordStatistics.cs" />
+    <Compile Include="WordStatistics\StatisticsMaker.cs" />
     <Compile Include="Core\Spiral.cs" />
     <Compile Include="Tests\CircularCloudLayouter_Should.cs" />
     <Compile Include="Tests\RectangleExtensionsTests.cs" />

@@ -92,9 +92,10 @@ namespace TagsCloudVisualization
             if (context.Result.Outcome.Status == TestStatus.Failed)
             {
                 var outputFile = $@"{context.TestDirectory}\FailedTests\{context.Test.Name}.png";
-                var visualizer = new TagsCloudVisualizer(config => config);
-                var bitmap = visualizer.DrawRectangles(Screen.PrimaryScreen.Bounds.Width,
-                    Screen.PrimaryScreen.Bounds.Height, layouter.Rectangles);
+                var visualizer = new TagsCloudVisualizer(new TagsCloudVisualizerConfiguration());
+                var bitmap = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
+                var graphics = Graphics.FromImage(bitmap);
+                visualizer.DrawRectangles(graphics, layouter.Rectangles);
                 bitmap.Save(outputFile);
 
                 Console.WriteLine($"Tag cloud visualization saved to file {outputFile}");

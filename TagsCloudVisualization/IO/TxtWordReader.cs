@@ -10,14 +10,8 @@ namespace TagsCloudVisualization.IO
     class TxtWordReader : IWordReader
     {
         private static readonly char[] wordDelimiters = { '.', ',', ';', ' ', ':', '(', ')', '[', ']', '\'', '"', '?', '!', '–', '\n' };
-        private readonly string filename;
 
-        public TxtWordReader(string filename)
-        {
-            this.filename = filename;
-        }
-
-        public IEnumerable<string> ReadWords()
+        public IEnumerable<string> ReadWords(string filename)
         {
             return File.ReadLines(filename)
                 .SelectMany(line => line.Split(wordDelimiters, StringSplitOptions.RemoveEmptyEntries));

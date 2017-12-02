@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Autofac;
 using Fclp;
-using TagsCloudVisualization;
 using TagsCloudVisualization.IO;
 
 namespace TagsCloudVisualization
@@ -22,10 +20,11 @@ namespace TagsCloudVisualization
         public string BackgroundColor { get; set; }
     }
 
-    public static partial class Program
+    public static class Program
     {
         private static readonly int width = Screen.PrimaryScreen.Bounds.Width;
         private static readonly int height = Screen.PrimaryScreen.Bounds.Height;
+        private static  readonly string myStemPath = "mystem.exe";
 
         public static void Main(string[] arg)
         {
@@ -36,14 +35,12 @@ namespace TagsCloudVisualization
             parser.Setup(args => args.Source)
                 .As("src")
                 .WithDescription("source file with text")
-                //.Required()
                 .SetDefault(@"data\war_and_peace.txt");
 
             parser.Setup(args => args.Destination)
                 .As("dest")
                 .WithDescription("file where cloud would be saved")
-                //.Required()
-                .SetDefault("cloud.jpg");
+                .SetDefault("cloud.png");
 
             parser.Setup(args => args.WordsCount)
                 .As('c', "count")
@@ -91,14 +88,15 @@ namespace TagsCloudVisualization
 
             builder.RegisterType<TxtWordReader>().WithParameter("filename", args.Source).As<IWordReader>();
             builder.Register(c => new TextMeasurer(args.FontFamily, args.FontSize));
-            builder.Register(c => new TagsCloudVisualizer(
-                config => config
-                    .SetBackground(Color.FromName(args.BackgroundColor))
-                    .SetForeground(Color.FromName(args.ForegroundColor))
-            ));
+            builder.RegisterType<TagsCloudVisualizerConfiguration>().OnActivated(
+                config => config.Instance
+                .SetBackground(Color.FromName(args.BackgroundColor))
+                .SetForeground(Color.FromName(args.ForegroundColor))
+            );
+            builder.RegisterType<TagsCloudVisualizer>();
 
-            builder.RegisterType<MyStemWordsLemmatizer>().WithParameter("mystemPath", "mystem.exe").As<IWordsLemmatizer>();
-            builder.RegisterType<WordStatistics>().As<IWordStatistics>();
+            builder.RegisterType<MyStemWordsLemmatizer>().WithParameter("mystemPath", myStemPath).As<IWordsLemmatizer>();
+            builder.RegisterType<StatisticsMaker>().As<IStatisticsMaker>();
 
             var container = builder.Build();
 
@@ -107,32 +105,34 @@ namespace TagsCloudVisualization
 
         private static void DrawWords(TagsCloudArgs args, IContainer container)
         {
-            var lines = File.ReadLines(args.Source);
             var wordReader = container.Resolve<IWordReader>();
-            var statistics = container.Resolve<IWordStatistics>();
+            var statisticsMaker = container.Resolve<IStatisticsMaker>();
             var measurer = container.Resolve<TextMeasurer>();
-            var words = GetTags(wordReader, statistics, measurer).Take(args.WordsCount);
+            var tags = GetTags(wordReader, args.Source, statisticsMaker, measurer)
+                .Take(args.WordsCount)
+                .ToArray();
 
             var layouter = container.Resolve<IRectangleLayouter>();
             var visualizer = container.Resolve<TagsCloudVisualizer>();
-            words = words.Select(word =>
-            {
-                word.Area = layouter.PutNextRectangle(word.Size);
-                return word;
-            });
 
-            var bitmap = visualizer.DrawWords(width, height, words);
+            foreach (var tag in tags)
+                tag.Area = layouter.PutNextRectangle(tag.Size);
+
+            var bitmap = new Bitmap(width, height);
+            var graphics = Graphics.FromImage(bitmap);
+            visualizer.DrawWords(graphics, tags);
             bitmap.Save(args.Destination);
         }
 
-        public static IEnumerable<CloudTag> GetTags(IWordReader wordReader, IWordStatistics statistics, TextMeasurer measurer)
+        public static IEnumerable<CloudTag> GetTags(IWordReader wordReader, string filename, IStatisticsMaker statisticsMaker, TextMeasurer measurer)
         {
-            var words = wordReader.ReadWords();
-            var mostFrequentWords = statistics.MakeStatistics(words);
-            var largestCount = mostFrequentWords.First().Value;
+            var words = wordReader.ReadWords(filename);
+            var statistics = statisticsMaker.MakeStatistics(words)
+                .OrderByDescending(pair => pair.Value);
+            var largestWordCount = statistics.First().Value;
 
-            var tags = mostFrequentWords
-                .Select(pair => (word: pair.Key, weight: (double)pair.Value / largestCount))
+            var tags = statistics
+                .Select(pair => (word: pair.Key, weight: (double)pair.Value / largestWordCount))
                 .Select(e => measurer.MeasureText(e.word, e.weight));
 
             return tags;

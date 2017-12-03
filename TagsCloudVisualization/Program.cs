@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using Autofac;
 using Fclp;
@@ -17,6 +18,8 @@ namespace TagsCloudVisualization
         public string BackgroundColor { get; set; }
         public int ImageWidth { get; set; }
         public int ImageHeight { get; set; }
+        public List<string> BoringWords { get; set; }
+        public List<PartOfSpeech> PartsOfSpeech { get; set; }
     }
 
     public static class Program
@@ -35,7 +38,7 @@ namespace TagsCloudVisualization
             parser.Setup(args => args.Destination)
                 .As("dest")
                 .WithDescription("file where cloud would be saved")
-                .SetDefault("cloud.png");
+                .SetDefault("cloud.txt");
 
             parser.Setup(args => args.TagsCount)
                 .As('c', "count")
@@ -71,6 +74,15 @@ namespace TagsCloudVisualization
                 .As('h', "height")
                 .WithDescription("image height")
                 .SetDefault(AppConfig.Height);
+
+            parser.Setup(args => args.BoringWords)
+                .As("boring")
+                .WithDescription("boring words that should be exluded from cloud")
+                .SetDefault(new List<string>());
+
+            parser.Setup(args => args.PartsOfSpeech)
+                .As("pos")
+                .WithDescription("use only words with sprecified parts of speech in the cloud");
 
             var result = parser.Parse(arguments);
             if (result.HelpCalled) return;
@@ -109,8 +121,8 @@ namespace TagsCloudVisualization
 
             builder.RegisterType<TxtWordReader>().WithParameter("filename", args.Source).As<IWordReader>();
             builder.RegisterType<MyStemWordLemmatizer>().WithParameter("mystemPath", AppConfig.MyStemPath).As<IWordLemmatizer>();
-            builder.RegisterType<PosWordFilter>().As<IWordFilter>();
-            builder.RegisterType<BoringWordFilter>().As<IWordFilter>();
+            builder.Register(c => new PosWordFilter(args.PartsOfSpeech)).As<IWordFilter>();
+            builder.Register(c => new BoringWordFilter(args.BoringWords)).As<IWordFilter>();
             builder.RegisterType<StatisticsMaker>().As<IStatisticsMaker>();
             builder.RegisterType<TagsCreator>().AsSelf();
 

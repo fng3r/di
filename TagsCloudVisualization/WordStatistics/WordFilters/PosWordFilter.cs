@@ -11,10 +11,10 @@ namespace TagsCloudVisualization
             PartOfSpeech.Adjective
         };
 
-        public PosWordFilter(HashSet<PartOfSpeech> allowedPartsOfSpeech = null)
+        public PosWordFilter(IEnumerable<PartOfSpeech> allowedPartsOfSpeech = null)
         {
             if (allowedPartsOfSpeech != null)
-                allowed = allowedPartsOfSpeech;
+                allowed = new HashSet<PartOfSpeech>(allowedPartsOfSpeech);
         }
 
         public bool Filter(Lexem lexem)

@@ -8,6 +8,6 @@ namespace TagsCloudVisualization.IO
 {
     public interface IWordReader
     {
-        IEnumerable<string> ReadWords(string filename);
+        IEnumerable<string> ReadWords();
     }
 }

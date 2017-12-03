@@ -92,7 +92,6 @@
     <Compile Include="Tests\CircularCloudLayouter_Should.cs" />
     <Compile Include="Tests\RectangleExtensionsTests.cs" />
     <Compile Include="Visualization\TagsCloudVisualizer.cs" />
-    <Compile Include="Visualization\TextMeasurer.cs" />
     <Compile Include="WordStatistics\MyStemWordLemmatizer.cs" />
   </ItemGroup>
   <ItemGroup>

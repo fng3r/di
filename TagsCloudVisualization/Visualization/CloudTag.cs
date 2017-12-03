@@ -5,15 +5,12 @@ namespace TagsCloudVisualization
     public class CloudTag
     {
         public string Text { get; }
-        public Font Font { get; }
-        public Size Size { get; }
-        public Rectangle Area { get; set; }
+        public double Weight { get; }
 
-        public CloudTag(string text, Font font, Size size)
+        public CloudTag(string text, double weight)
         {
             Text = text;
-            Font = font;
-            Size = size;
+            Weight = weight;
         }
     }
 }

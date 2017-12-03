@@ -93,12 +93,13 @@ namespace TagsCloudVisualization
             builder.RegisterType<Spiral>().As<IPointsGenerator>();
             builder.RegisterType<CircularCloudLayouter>().As<IRectangleLayouter>();
 
-            builder.RegisterType<TxtWordReader>().As<IWordReader>();
-            builder.Register(c => new TextMeasurer(args.FontFamily, args.FontSize));
+            builder.RegisterType<TxtWordReader>().WithParameter("filename", args.Source).As<IWordReader>();
+            builder.Register(c => new Font(args.FontFamily, args.FontSize));
             builder.RegisterType<TagsCloudVisualizerConfiguration>().OnActivated(
                 config => config.Instance
                     .SetBackground(Color.FromName(args.BackgroundColor))
                     .SetForeground(Color.FromName(args.ForegroundColor))
+                    .SetFont(config.Context.Resolve<Font>())
             );
             builder.RegisterType<TagsCloudVisualizer>();
 
@@ -117,35 +118,24 @@ namespace TagsCloudVisualization
         {
             var wordReader = container.Resolve<IWordReader>();
             var statisticsMaker = container.Resolve<IStatisticsMaker>();
-            var measurer = container.Resolve<TextMeasurer>();
-            var tags = GetTags(wordReader, args.Source, statisticsMaker, measurer)
+
+            var words = wordReader.ReadWords();
+            var statistics = statisticsMaker.MakeStatistics(words)
+                .OrderByDescending(pair => pair.Value);
+            var largestWordCount = statistics.First().Value;
+
+            var tags = statistics
+                .Select(pair => new CloudTag(pair.Key, (double)pair.Value / largestWordCount))
                 .Take(args.WordsCount)
                 .ToArray();
 
             var layouter = container.Resolve<IRectangleLayouter>();
             var visualizer = container.Resolve<TagsCloudVisualizer>();
 
-            foreach (var tag in tags)
-                tag.Area = layouter.PutNextRectangle(tag.Size);
-
             var bitmap = new Bitmap(args.ImageWidth, args.ImageHeight);
             var graphics = Graphics.FromImage(bitmap);
-            visualizer.DrawWords(graphics, tags);
+            visualizer.DrawWords(graphics, tags, layouter);
             bitmap.Save(args.Destination);
-        }
-
-        public static IEnumerable<CloudTag> GetTags(IWordReader wordReader, string filename, IStatisticsMaker statisticsMaker, TextMeasurer measurer)
-        {
-            var words = wordReader.ReadWords(filename);
-            var statistics = statisticsMaker.MakeStatistics(words)
-                .OrderByDescending(pair => pair.Value);
-            var largestWordCount = statistics.First().Value;
-
-            var tags = statistics
-                .Select(pair => (word: pair.Key, weight: (double)pair.Value / largestWordCount))
-                .Select(e => measurer.MeasureText(e.word, e.weight));
-
-            return tags;
         }
     }
 }

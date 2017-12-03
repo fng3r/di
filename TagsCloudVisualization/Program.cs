@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Windows.Forms;
 using Autofac;
 using Fclp;
 using TagsCloudVisualization.IO;
@@ -18,15 +17,13 @@ namespace TagsCloudVisualization
         public string FontFamily { get; set; }
         public string ForegroundColor { get; set; }
         public string BackgroundColor { get; set; }
+        public int ImageWidth { get; set; }
+        public int ImageHeight { get; set; }
     }
 
     public static class Program
     {
-        private static readonly int width = Screen.PrimaryScreen.Bounds.Width;
-        private static readonly int height = Screen.PrimaryScreen.Bounds.Height;
-        private static  readonly string myStemPath = "mystem.exe";
-
-        public static void Main(string[] arg)
+        public static void Main(string[] arguments)
         {
             var parser = new FluentCommandLineParser<TagsCloudArgs>();
 
@@ -45,29 +42,39 @@ namespace TagsCloudVisualization
             parser.Setup(args => args.WordsCount)
                 .As('c', "count")
                 .WithDescription("number of words which cloud would consists of")
-                .SetDefault(100);
+                .SetDefault(AppConfig.WordsCount);
 
             parser.Setup(args => args.FontSize)
                 .As("font-size")
                 .WithDescription("max font size of tags in the cloud")
-                .SetDefault(80);
+                .SetDefault(AppConfig.FontSize);
 
             parser.Setup(args => args.FontFamily)
                 .As("font-family")
                 .WithDescription("font family for tags in the cloud")
-                .SetDefault("Arial");
+                .SetDefault(AppConfig.FontFamily);
 
             parser.Setup(args => args.ForegroundColor)
                 .As("fg")
                 .WithDescription("foreground color")
-                .SetDefault("OrangeRed");
+                .SetDefault(AppConfig.ForegroundColor);
 
             parser.Setup(args => args.BackgroundColor)
                 .As("bg")
                 .WithDescription("background color")
-                .SetDefault("LightSteelBlue");
+                .SetDefault(AppConfig.BackgroundColor);
 
-            var result = parser.Parse(arg);
+            parser.Setup(args => args.ImageWidth)
+                .As('w', "width")
+                .WithDescription("image width")
+                .SetDefault(AppConfig.Width);
+
+            parser.Setup(args => args.ImageHeight)
+                .As('h', "height")
+                .WithDescription("image height")
+                .SetDefault(AppConfig.Height);
+
+            var result = parser.Parse(arguments);
             if (result.HelpCalled) return;
             if (result.HasErrors)
             {
@@ -82,11 +89,11 @@ namespace TagsCloudVisualization
         {
             var builder = new ContainerBuilder();
 
-            builder.Register(c => new Point(width / 2, height / 2));
+            builder.Register(c => new Point(args.ImageWidth / 2, args.ImageHeight / 2));
             builder.RegisterType<Spiral>().As<IPointsGenerator>();
             builder.RegisterType<CircularCloudLayouter>().As<IRectangleLayouter>();
 
-            builder.RegisterType<TxtWordReader>().WithParameter("filename", args.Source).As<IWordReader>();
+            builder.RegisterType<TxtWordReader>().As<IWordReader>();
             builder.Register(c => new TextMeasurer(args.FontFamily, args.FontSize));
             builder.RegisterType<TagsCloudVisualizerConfiguration>().OnActivated(
                 config => config.Instance
@@ -95,7 +102,7 @@ namespace TagsCloudVisualization
             );
             builder.RegisterType<TagsCloudVisualizer>();
 
-            builder.RegisterType<MyStemWordLemmatizer>().WithParameter("mystemPath", myStemPath).As<IWordLemmatizer>();
+            builder.RegisterType<MyStemWordLemmatizer>().WithParameter("mystemPath", AppConfig.MyStemPath).As<IWordLemmatizer>();
             builder.RegisterType<StatisticsMaker>().As<IStatisticsMaker>();
 
             builder.RegisterType<PosWordFilter>().As<IWordFilter>();
@@ -121,7 +128,7 @@ namespace TagsCloudVisualization
             foreach (var tag in tags)
                 tag.Area = layouter.PutNextRectangle(tag.Size);
 
-            var bitmap = new Bitmap(width, height);
+            var bitmap = new Bitmap(args.ImageWidth, args.ImageHeight);
             var graphics = Graphics.FromImage(bitmap);
             visualizer.DrawWords(graphics, tags);
             bitmap.Save(args.Destination);

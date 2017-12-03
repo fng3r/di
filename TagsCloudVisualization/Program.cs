@@ -38,7 +38,7 @@ namespace TagsCloudVisualization
             parser.Setup(args => args.Destination)
                 .As("dest")
                 .WithDescription("file where cloud would be saved")
-                .SetDefault("cloud.txt");
+                .SetDefault("cloud.png");
 
             parser.Setup(args => args.TagsCount)
                 .As('c', "count")
@@ -99,16 +99,17 @@ namespace TagsCloudVisualization
         {
             IContainer container = CreateContainer(args);
 
+            var tagsCreator = container.Resolve<TagsCreator>();
+            var tags = tagsCreator.CreateTags(args.TagsCount);
+
             var layouter = container.Resolve<IRectangleLayouter>();
             var visualizer = container.Resolve<TagsCloudVisualizer>();
-            var tagsCreator = container.Resolve<TagsCreator>();
-
-            var tags = tagsCreator.CreateTags(args.TagsCount);
             var bitmap = new Bitmap(args.ImageWidth, args.ImageHeight);
             var graphics = Graphics.FromImage(bitmap);
-
             visualizer.DrawWords(graphics, tags, layouter);
-            bitmap.Save(args.Destination);
+
+            var imageSaver = container.Resolve<IImageSaver>();
+            imageSaver.SaveImage(args.Destination, bitmap);
         }
 
         private static IContainer CreateContainer(TagsCloudArgs args)
@@ -134,6 +135,8 @@ namespace TagsCloudVisualization
                     .SetFont(config.Context.Resolve<Font>())
             );
             builder.RegisterType<TagsCloudVisualizer>();
+
+            builder.RegisterType<PngSaver>().As<IImageSaver>();
 
             var container = builder.Build();
             return container;

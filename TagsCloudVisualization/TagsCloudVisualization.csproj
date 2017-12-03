@@ -74,7 +74,9 @@
     <Compile Include="Core\IPointsGenerator.cs" />
     <Compile Include="Extensions\RectangleExtensions.cs" />
     <Compile Include="Core\IRectangleLayouter.cs" />
+    <Compile Include="IO\IImageSaver.cs" />
     <Compile Include="IO\IWordReader.cs" />
+    <Compile Include="IO\PngSaver.cs" />
     <Compile Include="IO\TxtWordReader.cs" />
     <Compile Include="Core\TagsCreator.cs" />
     <Compile Include="Visualization\CloudTag.cs" />

@@ -8,7 +8,7 @@ namespace TagsCloudVisualization
         public static int Height { get; } = Screen.PrimaryScreen.Bounds.Height;
         public static int FontSize { get; } = 80;
         public static string FontFamily { get; } = "Arial";
-        public static int WordsCount { get; } = 100;
+        public static int TagsCount { get; } = 100;
         public static string ForegroundColor { get; } = "OrangeRed";
         public static string BackgroundColor { get; } = "LightSteelBlue";
         public static string MyStemPath { get; } = "mystem.exe";

@@ -76,6 +76,7 @@
     <Compile Include="Core\IRectangleLayouter.cs" />
     <Compile Include="IO\IWordReader.cs" />
     <Compile Include="IO\TxtWordReader.cs" />
+    <Compile Include="Core\TagsCreator.cs" />
     <Compile Include="Visualization\CloudTag.cs" />
     <Compile Include="Visualization\TagsCloudVisualizerConfiguration.cs" />
     <Compile Include="WordStatistics\WordFilters\BoringWordFilter.cs" />

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using Autofac;
 using Fclp;
 using TagsCloudVisualization.IO;
@@ -10,7 +9,7 @@ namespace TagsCloudVisualization
 {
     internal class TagsCloudArgs
     {
-        public int WordsCount { get; set; }
+        public int TagsCount { get; set; }
         public string Source { get; set; }
         public string Destination { get; set; }
         public int FontSize { get; set; }
@@ -39,10 +38,10 @@ namespace TagsCloudVisualization
                 .WithDescription("file where cloud would be saved")
                 .SetDefault("cloud.png");
 
-            parser.Setup(args => args.WordsCount)
+            parser.Setup(args => args.TagsCount)
                 .As('c', "count")
                 .WithDescription("number of words which cloud would consists of")
-                .SetDefault(AppConfig.WordsCount);
+                .SetDefault(AppConfig.TagsCount);
 
             parser.Setup(args => args.FontSize)
                 .As("font-size")
@@ -87,6 +86,22 @@ namespace TagsCloudVisualization
 
         private static void Run(TagsCloudArgs args)
         {
+            IContainer container = CreateContainer(args);
+
+            var layouter = container.Resolve<IRectangleLayouter>();
+            var visualizer = container.Resolve<TagsCloudVisualizer>();
+            var tagsCreator = container.Resolve<TagsCreator>();
+
+            var tags = tagsCreator.CreateTags(args.TagsCount);
+            var bitmap = new Bitmap(args.ImageWidth, args.ImageHeight);
+            var graphics = Graphics.FromImage(bitmap);
+
+            visualizer.DrawWords(graphics, tags, layouter);
+            bitmap.Save(args.Destination);
+        }
+
+        private static IContainer CreateContainer(TagsCloudArgs args)
+        {
             var builder = new ContainerBuilder();
 
             builder.Register(c => new Point(args.ImageWidth / 2, args.ImageHeight / 2));
@@ -94,6 +109,12 @@ namespace TagsCloudVisualization
             builder.RegisterType<CircularCloudLayouter>().As<IRectangleLayouter>();
 
             builder.RegisterType<TxtWordReader>().WithParameter("filename", args.Source).As<IWordReader>();
+            builder.RegisterType<MyStemWordLemmatizer>().WithParameter("mystemPath", AppConfig.MyStemPath).As<IWordLemmatizer>();
+            builder.RegisterType<PosWordFilter>().As<IWordFilter>();
+            builder.RegisterType<BoringWordFilter>().As<IWordFilter>();
+            builder.RegisterType<StatisticsMaker>().As<IStatisticsMaker>();
+            builder.RegisterType<TagsCreator>().AsSelf();
+
             builder.Register(c => new Font(args.FontFamily, args.FontSize));
             builder.RegisterType<TagsCloudVisualizerConfiguration>().OnActivated(
                 config => config.Instance
@@ -103,39 +124,8 @@ namespace TagsCloudVisualization
             );
             builder.RegisterType<TagsCloudVisualizer>();
 
-            builder.RegisterType<MyStemWordLemmatizer>().WithParameter("mystemPath", AppConfig.MyStemPath).As<IWordLemmatizer>();
-            builder.RegisterType<StatisticsMaker>().As<IStatisticsMaker>();
-
-            builder.RegisterType<PosWordFilter>().As<IWordFilter>();
-            builder.RegisterType<BoringWordFilter>().As<IWordFilter>();
-
             var container = builder.Build();
-
-            DrawWords(args, container);
-        }
-
-        private static void DrawWords(TagsCloudArgs args, IContainer container)
-        {
-            var wordReader = container.Resolve<IWordReader>();
-            var statisticsMaker = container.Resolve<IStatisticsMaker>();
-
-            var words = wordReader.ReadWords();
-            var statistics = statisticsMaker.MakeStatistics(words)
-                .OrderByDescending(pair => pair.Value);
-            var largestWordCount = statistics.First().Value;
-
-            var tags = statistics
-                .Select(pair => new CloudTag(pair.Key, (double)pair.Value / largestWordCount))
-                .Take(args.WordsCount)
-                .ToArray();
-
-            var layouter = container.Resolve<IRectangleLayouter>();
-            var visualizer = container.Resolve<TagsCloudVisualizer>();
-
-            var bitmap = new Bitmap(args.ImageWidth, args.ImageHeight);
-            var graphics = Graphics.FromImage(bitmap);
-            visualizer.DrawWords(graphics, tags, layouter);
-            bitmap.Save(args.Destination);
+            return container;
         }
     }
 }

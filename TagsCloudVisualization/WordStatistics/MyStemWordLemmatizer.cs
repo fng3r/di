@@ -6,10 +6,10 @@ using System.Text.RegularExpressions;
 
 namespace TagsCloudVisualization
 {
-    public class MyStemWordsLemmatizer : IWordsLemmatizer
+    public class MyStemWordLemmatizer : IWordLemmatizer
     {
         private readonly string tempFile = "tempFile.txt";
-        private static readonly Dictionary<string, PartOfSpeech> partsOfSpeech = new Dictionary<string, PartOfSpeech>()
+        private static readonly Dictionary<string, PartOfSpeech> partsOfSpeech = new Dictionary<string, PartOfSpeech>
         {
             ["A"] = PartOfSpeech.Adjective,
             ["ADV"] = PartOfSpeech.Adverb,
@@ -28,7 +28,7 @@ namespace TagsCloudVisualization
         };
         private readonly Process process;
 
-        public MyStemWordsLemmatizer(string mystemPath)
+        public MyStemWordLemmatizer(string mystemPath)
         {
             process = new Process
             {

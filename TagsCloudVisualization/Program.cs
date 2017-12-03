@@ -90,13 +90,16 @@ namespace TagsCloudVisualization
             builder.Register(c => new TextMeasurer(args.FontFamily, args.FontSize));
             builder.RegisterType<TagsCloudVisualizerConfiguration>().OnActivated(
                 config => config.Instance
-                .SetBackground(Color.FromName(args.BackgroundColor))
-                .SetForeground(Color.FromName(args.ForegroundColor))
+                    .SetBackground(Color.FromName(args.BackgroundColor))
+                    .SetForeground(Color.FromName(args.ForegroundColor))
             );
             builder.RegisterType<TagsCloudVisualizer>();
 
-            builder.RegisterType<MyStemWordsLemmatizer>().WithParameter("mystemPath", myStemPath).As<IWordsLemmatizer>();
+            builder.RegisterType<MyStemWordLemmatizer>().WithParameter("mystemPath", myStemPath).As<IWordLemmatizer>();
             builder.RegisterType<StatisticsMaker>().As<IStatisticsMaker>();
+
+            builder.RegisterType<PosWordFilter>().As<IWordFilter>();
+            builder.RegisterType<BoringWordFilter>().As<IWordFilter>();
 
             var container = builder.Build();
 

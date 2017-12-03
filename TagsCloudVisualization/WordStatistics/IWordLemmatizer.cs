@@ -2,7 +2,7 @@
 
 namespace TagsCloudVisualization
 {
-    public interface IWordsLemmatizer
+    public interface IWordLemmatizer
     {
         IEnumerable<Lexem> LemmatizeWords(IEnumerable<string> words);
     }

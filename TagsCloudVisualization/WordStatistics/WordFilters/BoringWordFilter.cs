@@ -7,14 +7,8 @@ namespace TagsCloudVisualization
     {
         private readonly HashSet<string> boringWords;
 
-        public BoringWordFilter(IEnumerable<string> words)
-        {
-            boringWords = new HashSet<string>(words, StringComparer.OrdinalIgnoreCase);
-        }
+        public BoringWordFilter(IEnumerable<string> words) => boringWords = new HashSet<string>(words, StringComparer.OrdinalIgnoreCase);
 
-        public bool Filter(Lexem lexem)
-        {
-            return !boringWords.Contains(lexem.Lemma);
-        }
+        public bool Filter(Lexem lexem) => !boringWords.Contains(lexem.Lemma);
     }
 }

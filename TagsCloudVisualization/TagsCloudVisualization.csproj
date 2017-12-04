@@ -89,7 +89,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WordStatistics\PartOfSpeech.cs" />
-    <Compile Include="WordStatistics\WordFilters\PosWordFilter.cs" />
+    <Compile Include="WordStatistics\WordFilters\PartOfSpeechWordFilter.cs" />
     <Compile Include="WordStatistics\StatisticsMaker.cs" />
     <Compile Include="Core\Spiral.cs" />
     <Compile Include="Tests\CircularCloudLayouter_Should.cs" />

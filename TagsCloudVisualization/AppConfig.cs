@@ -1,4 +1,5 @@
-﻿using System.Windows.Forms;
+﻿using System.Collections.Generic;
+using System.Windows.Forms;
 
 namespace TagsCloudVisualization
 {
@@ -12,5 +13,11 @@ namespace TagsCloudVisualization
         public static string ForegroundColor { get; } = "OrangeRed";
         public static string BackgroundColor { get; } = "LightSteelBlue";
         public static string MyStemPath { get; } = "mystem.exe";
+        public static List<PartOfSpeech> AllowedPartsOfSpeech = new List<PartOfSpeech>
+        {
+            PartOfSpeech.Noun,
+            PartOfSpeech.Verb,
+            PartOfSpeech.Adjective
+        };
     }
 }

@@ -9,6 +9,8 @@ namespace TagsCloudVisualization
 {
     internal class TagsCloudArgs
     {
+        private List<string> boringWords;
+
         public int TagsCount { get; set; }
         public string Source { get; set; }
         public string Destination { get; set; }
@@ -18,7 +20,13 @@ namespace TagsCloudVisualization
         public string BackgroundColor { get; set; }
         public int ImageWidth { get; set; }
         public int ImageHeight { get; set; }
-        public List<string> BoringWords { get; set; }
+
+        public List<string> BoringWords
+        {
+            get => boringWords ?? (boringWords = new List<string>());
+            set => boringWords = value;
+        }
+
         public List<PartOfSpeech> PartsOfSpeech { get; set; }
     }
 
@@ -77,12 +85,12 @@ namespace TagsCloudVisualization
 
             parser.Setup(args => args.BoringWords)
                 .As("boring")
-                .WithDescription("boring words that should be exluded from cloud")
-                .SetDefault(new List<string>());
+                .WithDescription("boring words that should be exluded from cloud");
 
             parser.Setup(args => args.PartsOfSpeech)
                 .As("pos")
-                .WithDescription("use only words with sprecified parts of speech in the cloud");
+                .WithDescription("use only words with sprecified parts of speech in the cloud")
+                .SetDefault(AppConfig.AllowedPartsOfSpeech);
 
             var result = parser.Parse(arguments);
             if (result.HelpCalled) return;
@@ -120,9 +128,9 @@ namespace TagsCloudVisualization
             builder.RegisterType<Spiral>().As<IPointsGenerator>();
             builder.RegisterType<CircularCloudLayouter>().As<IRectangleLayouter>();
 
-            builder.RegisterType<TxtWordReader>().WithParameter("filename", args.Source).As<IWordReader>();
-            builder.RegisterType<MyStemWordLemmatizer>().WithParameter("mystemPath", AppConfig.MyStemPath).As<IWordLemmatizer>();
-            builder.Register(c => new PosWordFilter(args.PartsOfSpeech)).As<IWordFilter>();
+            builder.Register(c => new TxtWordReader(args.Source)).As<IWordReader>();
+            builder.Register(c => new MyStemWordLemmatizer(AppConfig.MyStemPath)).As<IWordLemmatizer>();
+            builder.Register(c => new PartOfSpeechWordFilter(args.PartsOfSpeech)).As<IWordFilter>();
             builder.Register(c => new BoringWordFilter(args.BoringWords)).As<IWordFilter>();
             builder.RegisterType<StatisticsMaker>().As<IStatisticsMaker>();
             builder.RegisterType<TagsCreator>().AsSelf();

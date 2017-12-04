@@ -15,7 +15,7 @@ namespace TagsCloudVisualization
             this.statisticsMaker = statisticsMaker;
         }
 
-        public IEnumerable<CloudTag> CreateTags(int tagsCount)
+        public CloudTag[] CreateTags(int tagsCount)
         {
             var words = wordReader.ReadWords();
             var mostFrequentWords = statisticsMaker.MakeStatistics(words)
@@ -25,7 +25,8 @@ namespace TagsCloudVisualization
             var largestWordCount = mostFrequentWords.First().Value;
 
             return mostFrequentWords
-                .Select(pair => new CloudTag(pair.Key, (double) pair.Value / largestWordCount));
+                .Select(pair => new CloudTag(pair.Key, (double) pair.Value / largestWordCount))
+                .ToArray();
         }
     }
 }

@@ -72,7 +72,8 @@ namespace TagsCloudVisualization
 
             var distancesToCenter = outerRects
                 .Select(r => r.Center())
-                .Select(p => GetVectorLength(p, center));
+                .Select(p => GetVectorLength(p, center))
+                .ToArray();
 
             distancesToCenter
                 .SelectMany(d1 => distancesToCenter.Select(d2 => Math.Abs(d1 - d2)))

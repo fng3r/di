@@ -55,12 +55,12 @@ namespace TagsCloudVisualization
             parser.Setup(args => args.Source)
                 .As("src")
                 .WithDescription("source file with text")
-                .SetDefault(@"data\war_and_peace.txt");
+                .Required();
 
             parser.Setup(args => args.Destination)
                 .As("dest")
                 .WithDescription("file where cloud would be saved")
-                .SetDefault("cloud.png");
+                .Required();
 
             parser.Setup(args => args.TagsCount)
                 .As('c', "count")
@@ -109,7 +109,8 @@ namespace TagsCloudVisualization
             if (result.HelpCalled) return;
             if (result.HasErrors)
             {
-                Console.WriteLine(result.ErrorText);
+                Console.WriteLine("parameters <src> and <dest> should be specified");
+                parser.HelpOption.ShowHelp(parser.Options);
                 return;
             }
 
@@ -149,12 +150,9 @@ namespace TagsCloudVisualization
             builder.RegisterType<TagsCreator>().AsSelf();
 
             builder.Register(c => new Font(args.FontFamily, args.FontSize));
-            builder.RegisterType<TagsCloudVisualizerConfiguration>().OnActivated(
-                config => config.Instance
-                    .SetBackground(Color.FromName(args.BackgroundColor))
-                    .SetForeground(Color.FromName(args.ForegroundColor))
-                    .SetFont(config.Context.Resolve<Font>())
-            );
+            builder.Register(c => new Colors(
+                Color.FromName(args.BackgroundColor), Color.FromName(args.ForegroundColor)));
+            builder.RegisterType<TagsCloudVisualizerConfiguration>();
             builder.RegisterType<TagsCloudVisualizer>();
 
             builder.RegisterType<PngSaver>().As<IImageSaver>();

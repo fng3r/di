@@ -8,7 +8,7 @@ namespace TagsCloudVisualization
 {
     public class MyStemWordLemmatizer : IWordLemmatizer
     {
-        private readonly string tempFile = "tempFile.txt";
+        private static readonly Regex linePattern = new Regex(@"(?<lemma>[а-я]+)\??=(?<pos>[A-Z]+)");
         private static readonly Dictionary<string, PartOfSpeech> partsOfSpeech = new Dictionary<string, PartOfSpeech>
         {
             ["A"] = PartOfSpeech.Adjective,
@@ -26,7 +26,10 @@ namespace TagsCloudVisualization
             ["ANUM"] = PartOfSpeech.Numeral,
             ["COM"] = PartOfSpeech.CompositePart
         };
+
+        private readonly string tempFile = "tempFile.txt";
         private readonly Process process;
+
 
         public MyStemWordLemmatizer(string mystemPath)
         {
@@ -45,25 +48,24 @@ namespace TagsCloudVisualization
         public IEnumerable<Lexem> LemmatizeWords(IEnumerable<string> words)
         {
             File.WriteAllLines(tempFile, words);
-            process.Start();
-
-            var pattern = new Regex(@"(?<lemma>[а-я]+)\??=(?<pos>[A-Z]+)");
-            using (var textReader = new StreamReader(process.StandardOutput.BaseStream, Encoding.UTF8))
+            using (process)
             {
-                string str;
-                while ((str = textReader.ReadLine()) != null)
+                process.Start();
+                using (var textReader = new StreamReader(process.StandardOutput.BaseStream, Encoding.UTF8))
                 {
-                    var match = pattern.Match(str);
-                    if (!match.Success) continue;
-                    var lemma = match.Groups["lemma"].Value;
-                    var partOfSpeech = partsOfSpeech[match.Groups["pos"].Value];
-                    var lexem = new Lexem(lemma, partOfSpeech);
+                    string line;
+                    while ((line = textReader.ReadLine()) != null)
+                    {
+                        var match = linePattern.Match(line);
+                        if (!match.Success) continue;
+                        var lemma = match.Groups["lemma"].Value;
+                        var partOfSpeech = partsOfSpeech[match.Groups["pos"].Value];
+                        var lexem = new Lexem(lemma, partOfSpeech);
 
-                    yield return lexem;
+                        yield return lexem;
+                    }
                 }
-            }
-
-            process.Close();
+            }   
             File.Delete(tempFile);
         }
     }

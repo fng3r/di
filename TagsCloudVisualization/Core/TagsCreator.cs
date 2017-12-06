@@ -20,9 +20,10 @@ namespace TagsCloudVisualization
             var words = wordReader.ReadWords();
             var mostFrequentWords = statisticsMaker.MakeStatistics(words)
                 .OrderByDescending(pair => pair.Value)
-                .Take(tagsCount);
+                .Take(tagsCount)
+                .ToArray();
 
-            var largestWordCount = mostFrequentWords.First().Value;
+            var largestWordCount = mostFrequentWords[0].Value;
 
             return mostFrequentWords
                 .Select(pair => new CloudTag(pair.Key, (double) pair.Value / largestWordCount))

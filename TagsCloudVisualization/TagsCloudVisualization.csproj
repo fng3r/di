@@ -69,7 +69,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AppConfig.cs" />
+    <Compile Include="AppSettings.cs" />
     <Compile Include="Core\CircularCloudLayouter.cs" />
     <Compile Include="Core\IPointsGenerator.cs" />
     <Compile Include="Extensions\RectangleExtensions.cs" />

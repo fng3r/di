@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Windows.Forms;
 using Autofac;
 using Fclp;
 using TagsCloudVisualization.IO;
@@ -10,6 +11,7 @@ namespace TagsCloudVisualization
     internal class TagsCloudArgs
     {
         private List<string> boringWords;
+        private List<PartOfSpeech> partsOfSpeech;
 
         public int TagsCount { get; set; }
         public string Source { get; set; }
@@ -27,11 +29,23 @@ namespace TagsCloudVisualization
             set => boringWords = value;
         }
 
-        public List<PartOfSpeech> PartsOfSpeech { get; set; }
+        public List<PartOfSpeech> PartsOfSpeech
+        {
+            get => partsOfSpeech ?? (partsOfSpeech = new List<PartOfSpeech>
+            {
+                PartOfSpeech.Noun,
+                PartOfSpeech.Verb,
+                PartOfSpeech.Adjective
+            });
+            set => partsOfSpeech = value;
+        }
     }
 
     public static class Program
     {
+        private static readonly AppSettings settings =
+            (AppSettings)System.Configuration.ConfigurationManager.GetSection("settings");
+
         public static void Main(string[] arguments)
         {
             var parser = new FluentCommandLineParser<TagsCloudArgs>();
@@ -51,37 +65,37 @@ namespace TagsCloudVisualization
             parser.Setup(args => args.TagsCount)
                 .As('c', "count")
                 .WithDescription("number of words which cloud would consists of")
-                .SetDefault(AppConfig.TagsCount);
+                .SetDefault(settings.TagsCount);
 
             parser.Setup(args => args.FontSize)
                 .As("font-size")
                 .WithDescription("max font size of tags in the cloud")
-                .SetDefault(AppConfig.FontSize);
+                .SetDefault(settings.Font.Size);
 
             parser.Setup(args => args.FontFamily)
                 .As("font-family")
                 .WithDescription("font family for tags in the cloud")
-                .SetDefault(AppConfig.FontFamily);
+                .SetDefault(settings.Font.Family);
 
             parser.Setup(args => args.ForegroundColor)
                 .As("fg")
                 .WithDescription("foreground color")
-                .SetDefault(AppConfig.ForegroundColor);
+                .SetDefault(settings.Color.Foreground);
 
             parser.Setup(args => args.BackgroundColor)
                 .As("bg")
                 .WithDescription("background color")
-                .SetDefault(AppConfig.BackgroundColor);
+                .SetDefault(settings.Color.Background);
 
             parser.Setup(args => args.ImageWidth)
                 .As('w', "width")
                 .WithDescription("image width")
-                .SetDefault(AppConfig.Width);
+                .SetDefault(Screen.PrimaryScreen.Bounds.Width);
 
             parser.Setup(args => args.ImageHeight)
                 .As('h', "height")
                 .WithDescription("image height")
-                .SetDefault(AppConfig.Height);
+                .SetDefault(Screen.PrimaryScreen.Bounds.Height);
 
             parser.Setup(args => args.BoringWords)
                 .As("boring")
@@ -89,8 +103,7 @@ namespace TagsCloudVisualization
 
             parser.Setup(args => args.PartsOfSpeech)
                 .As("pos")
-                .WithDescription("use only words with sprecified parts of speech in the cloud")
-                .SetDefault(AppConfig.AllowedPartsOfSpeech);
+                .WithDescription("use only words with sprecified parts of speech in the cloud");
 
             var result = parser.Parse(arguments);
             if (result.HelpCalled) return;
@@ -129,7 +142,7 @@ namespace TagsCloudVisualization
             builder.RegisterType<CircularCloudLayouter>().As<IRectangleLayouter>();
 
             builder.Register(c => new TxtWordReader(args.Source)).As<IWordReader>();
-            builder.Register(c => new MyStemWordLemmatizer(AppConfig.MyStemPath)).As<IWordLemmatizer>();
+            builder.Register(c => new MyStemWordLemmatizer(settings.MyStemPath)).As<IWordLemmatizer>();
             builder.Register(c => new PartOfSpeechWordFilter(args.PartsOfSpeech)).As<IWordFilter>();
             builder.Register(c => new BoringWordFilter(args.BoringWords)).As<IWordFilter>();
             builder.RegisterType<StatisticsMaker>().As<IStatisticsMaker>();

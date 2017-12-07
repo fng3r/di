@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using NUnit.Framework;
 
-namespace TagsCloudVisualization
+namespace TagsCloudVisualization.Tests
 {
     [TestFixture]
     public class RectangleExtensionsTests

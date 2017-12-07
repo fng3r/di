@@ -8,7 +8,7 @@ using MoreLinq;
 using NUnit.Framework;
 using NUnit.Framework.Interfaces;
 
-namespace TagsCloudVisualization
+namespace TagsCloudVisualization.Tests
 {
     [TestFixture]
     public class CircularCloudLayouter_Should

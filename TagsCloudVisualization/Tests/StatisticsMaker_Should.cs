@@ -5,6 +5,7 @@ using FluentAssertions;
 using NUnit.Framework;
 using Telerik.JustMock;
 using Telerik.JustMock.Helpers;
+using Telerik.JustMock.Expectations;
 
 namespace TagsCloudVisualization.Tests
 {
@@ -21,11 +22,11 @@ namespace TagsCloudVisualization.Tests
         [SetUp]
         public void SetUp()
         {
-            words = Enumerable.Repeat("слов", 20);
-            lexems = Enumerable.Repeat(new Lexem("слово", PartOfSpeech.Noun), 20);
+            words = Enumerable.Repeat("слов", 3);
+            lexems = Enumerable.Repeat(new Lexem("cлово", PartOfSpeech.Noun), 3);
 
             lemmatizer = Mock.Create<IWordLemmatizer>();
-            lemmatizer.Arrange(l => l.LemmatizeWords(words)).Returns(lexems);
+            Mock.Arrange(() => lemmatizer.LemmatizeWords(words)).Returns(lexems);
 
             filter1 = Mock.Create<IWordFilter>();
             filter2 = Mock.Create<IWordFilter>();
@@ -36,61 +37,33 @@ namespace TagsCloudVisualization.Tests
         }
 
         [Test]
-        public void ShouldCallLemmatizer_OnlyOnce()
-        {
-            statisticsMaker.MakeStatistics(words);
-
-            Mock.Assert(() => lemmatizer.LemmatizeWords(words), Occurs.Once());
-        }
-
-        [Test]
-        public void ShouldCallFilter_ForEveryWord()
+        public void CallFilter_ForEveryWord()
         {
             statisticsMaker.MakeStatistics(words);
 
             Mock.Assert(() => filter1.Filter(Arg.IsAny<Lexem>()), Occurs.Exactly(words.Count()));
         }
 
-        [Test]
-        public void ShouldNotCallOtherFilters_WhenFirstOneFails()
-        {
-            statisticsMaker = new StatisticsMaker(lemmatizer, new[] { filter2, filter1 });
-
-            statisticsMaker.MakeStatistics(words);
-
-            Mock.Assert(() => filter1.Filter(Arg.IsAny<Lexem>()), Occurs.Never());
-        }
-
-        [Test]
-        public void ReturnEmptyDictionary_WhenFilterRejectEveryWord()
-        {
-            Mock.Arrange(() => filter1.Filter(Arg.IsAny<Lexem>())).Returns(false);
-
-            statisticsMaker.MakeStatistics(words).Should().BeEmpty();
-        }
-
-        [Test]
-        public void ReturnEmptyDictionary_WhenWordsIsEmpty()
-        {
-            words = Array.Empty<string>();
-
-            statisticsMaker.MakeStatistics(words).Should().BeEmpty();
-        }
-
-        [Test]
-        public void ContainOnlyWords_WithSpecifiedPartOfSpeech()
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(3)]
+        public void ReturnAsManyWords_AsPassFilter(int passFilterCount)
         {
             Mock.Arrange(() => lemmatizer.LemmatizeWords(words)).Returns(new[]
-                {
-                    new Lexem("один", PartOfSpeech.Numeral),
-                    new Lexem("неудачливый", PartOfSpeech.Adjective),
-                    new Lexem("два", PartOfSpeech.Numeral),
-                });
+            {
+                new Lexem("a", Arg.IsAny<PartOfSpeech>()),
+                new Lexem("б", Arg.IsAny<PartOfSpeech>()),
+                new Lexem("в", Arg.IsAny<PartOfSpeech>())
+            });
 
-            Mock.Arrange(() => filter1.Filter(Arg.IsAny<Lexem>()))
-                .Returns<Lexem>(l => l.PartOfSpeech == PartOfSpeech.Numeral);
+            var filterResults = new bool[3];
+            for (var i = 0; i < passFilterCount; i++)
+                filterResults[i] = true;
 
-            statisticsMaker.MakeStatistics(words).Keys.ShouldBeEquivalentTo(new[] { "один", "два" });
+            Mock.Arrange(() => filter1.Filter(Arg.IsAny<Lexem>())).ReturnsMany(filterResults);
+
+            statisticsMaker.MakeStatistics(words)
+                .Should().HaveCount(passFilterCount);
         }
 
         [Test]
@@ -98,34 +71,42 @@ namespace TagsCloudVisualization.Tests
         {
             statisticsMaker = new StatisticsMaker(lemmatizer, new[] { filter1, filter2 });
 
-            statisticsMaker.MakeStatistics(words).Should().BeEmpty();
+            statisticsMaker.MakeStatistics(words)
+                .Should().BeEmpty();
+        }
+
+        [Test]
+        public void ReturnEmptyDictionary_WhenWordsIsEmpty()
+        {
+            words = Array.Empty<string>();
+
+            statisticsMaker.MakeStatistics(words)
+                .Should().BeEmpty();
         }
 
         [Test]
         public void ReturnWordLemma_InsteadOfInitialWord()
         {
-            statisticsMaker.MakeStatistics(words).Should().ContainKey("слово").And.NotContainKey("слов");
-        }
+            Mock.Arrange(() => lemmatizer.LemmatizeWords(words))
+                .Returns(new[] {new Lexem("слово", Arg.IsAny<PartOfSpeech>())});
 
-        [Test]
-        public void ReturnOnlyOneWord_WhenWordsHaveSameLexem()
-        {
-            lexems = new [] { new Lexem("слово", PartOfSpeech.Noun) };
-            Mock.Arrange(() => lemmatizer.LemmatizeWords(words)).Returns(lexems);
-
-            statisticsMaker.MakeStatistics(words).Count.Should().Be(1);
+            statisticsMaker.MakeStatistics(words)
+                .Should().ContainKey("слово").And.NotContainKey("слов");
         }
 
         [Test]
         public void ReturnSameAmountOfWords_AsItsInitialCount_WhenWordsAreDifferent()
         {
-            words = Enumerable.Range('а', 'я' - 'а')
-                .Select(c => ((char)c).ToString())
-                .ToArray();
-            lexems = words.Select(w => new Lexem(w, Arg.IsAny<PartOfSpeech>()));
-            Mock.Arrange(() => lemmatizer.LemmatizeWords(words)).Returns(lexems);
+            words = new[] { "оп", "ап", "хоп" };
+            Mock.Arrange(() => lemmatizer.LemmatizeWords(words)).Returns(new[]
+            {
+                new Lexem("оп", Arg.IsAny<PartOfSpeech>()),
+                new Lexem("ап", Arg.IsAny<PartOfSpeech>()),
+                new Lexem("хоп", Arg.IsAny<PartOfSpeech>())
+            });
 
-            statisticsMaker.MakeStatistics(words).Count.Should().Be(words.Count());
+            statisticsMaker.MakeStatistics(words)
+                .Should().HaveCount(words.Count());
         }
     }
 }

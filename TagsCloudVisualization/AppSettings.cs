@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace TagsCloudVisualization
 {
@@ -28,7 +23,8 @@ namespace TagsCloudVisualization
         [ConfigurationProperty("fontFamily")]
         public String Family => (String)this["fontFamily"];
 
-        [ConfigurationProperty("size", DefaultValue = "80", IsRequired = false)]
+        [ConfigurationProperty("size", DefaultValue = "80")]
+        [IntegerValidator(MinValue = 10, MaxValue = 200)]
         public int Size => (int)this["size"];
     }
     

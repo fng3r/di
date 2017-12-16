@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using ResultOf;
 
 namespace TagsCloudVisualization
 {
@@ -14,12 +15,15 @@ namespace TagsCloudVisualization
             this.filters = filters;
         }
 
-        public Dictionary<string, int> MakeStatistics(IEnumerable<string> words)
+        public Result<Dictionary<string, int>> MakeStatistics(IEnumerable<string> words)
         {
-            return lemmatizer.LemmatizeWords(words)
-                .Where(l => filters.All(filter => filter.Filter(l)))
-                .GroupBy(l => l.Lemma)
-                .ToDictionary(group => group.Key, group => group.Count());
+            return Result.Of(() => 
+                lemmatizer.LemmatizeWords(words)
+                    .Where(l => filters.All(filter => filter.Filter(l)))
+                    .GroupBy(l => l.Lemma)
+                    .ToDictionary(group => group.Key, group => group.Count())
+                    )
+                .RefineError("Failed to collect word statistics");
         }
     }
 }

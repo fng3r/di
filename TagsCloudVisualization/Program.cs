@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using Autofac;
 using Fclp;
+using ResultOf;
 using TagsCloudVisualization.IO;
 
 namespace TagsCloudVisualization
@@ -43,10 +46,69 @@ namespace TagsCloudVisualization
 
     public static class Program
     {
-        private static readonly AppSettings settings =
-            (AppSettings)System.Configuration.ConfigurationManager.GetSection("settings");
-
         public static void Main(string[] arguments)
+        {
+            var loadSettingsResult = LoadSettings()
+                .RefineError("Failed to load settings from App.config")
+                .OnFail(ExitWithMessage);
+                
+            var parser = CreateArgParser(loadSettingsResult.Value);
+
+            var result = parser.Parse(arguments);
+            if (result.HelpCalled) return;
+            if (result.HasErrors)
+            {
+                Console.WriteLine("parameters <src> and <dest> should be specified");
+                parser.HelpOption.ShowHelp(parser.Options);
+                return;
+            }
+
+            var parseArgsResult = parser.Object.AsResult()
+                .Then(ValidateSourceFileExists)
+                .Then(ValidateFont)
+                .RefineError("Invalid arguments")
+                .OnFail(ExitWithMessage);
+
+            Run(parseArgsResult.Value, loadSettingsResult.Value);
+        }
+
+        private static Result<AppSettings> LoadSettings()
+        {
+            return Result.Of(() => (AppSettings) System.Configuration.ConfigurationManager.GetSection("settings"));
+        }
+
+        private static Result<TagsCloudArgs> ValidateFont(TagsCloudArgs args)
+        {
+            return args.Validate(a => FontFamily.Families.Select(f => f.Name).Contains(a.FontFamily), 
+                $"Font family '{args.FontFamily}' is not found. Try to specify another value or skip this parameter to use defaults");
+        }
+
+        private static Result<TagsCloudArgs> ValidateSourceFileExists(TagsCloudArgs args)
+        {
+            return args.Validate(a => File.Exists(a.Source), $"File '{args.Source}' doesn't exist");
+        }
+
+        private static void Run(TagsCloudArgs args, AppSettings settings)
+        {
+            IContainer container = CreateContainer(args, settings);
+
+            var tagsCreator = container.Resolve<TagsCreator>();
+            var layouter = container.Resolve<IRectangleLayouter>();
+            var visualizer = container.Resolve<TagsCloudVisualizer>();
+            var imageSaver = container.Resolve<IImageSaver>();
+
+            var bitmap = new Bitmap(args.ImageWidth, args.ImageHeight);
+            var graphics = Graphics.FromImage(bitmap);
+
+            tagsCreator.CreateTags(args.TagsCount)
+                .Then(tags => visualizer.DrawWords(graphics, tags, layouter))
+                .Then(_ => imageSaver.SaveImage(args.Destination, bitmap))
+                .RefineError("Can't create tags cloud")
+                .OnFail(Console.WriteLine)
+                .OnSuccess(_ => Console.WriteLine($"Tags cloud successfully saved to '{args.Destination}'"));
+        }
+
+        private static FluentCommandLineParser<TagsCloudArgs> CreateArgParser(AppSettings settings)
         {
             var parser = new FluentCommandLineParser<TagsCloudArgs>();
 
@@ -105,36 +167,10 @@ namespace TagsCloudVisualization
                 .As("pos")
                 .WithDescription("use only words with sprecified parts of speech in the cloud");
 
-            var result = parser.Parse(arguments);
-            if (result.HelpCalled) return;
-            if (result.HasErrors)
-            {
-                Console.WriteLine("parameters <src> and <dest> should be specified");
-                parser.HelpOption.ShowHelp(parser.Options);
-                return;
-            }
-
-            Run(parser.Object);
+            return parser;
         }
 
-        private static void Run(TagsCloudArgs args)
-        {
-            IContainer container = CreateContainer(args);
-
-            var tagsCreator = container.Resolve<TagsCreator>();
-            var tags = tagsCreator.CreateTags(args.TagsCount);
-
-            var layouter = container.Resolve<IRectangleLayouter>();
-            var visualizer = container.Resolve<TagsCloudVisualizer>();
-            var bitmap = new Bitmap(args.ImageWidth, args.ImageHeight);
-            var graphics = Graphics.FromImage(bitmap);
-            visualizer.DrawWords(graphics, tags, layouter);
-
-            var imageSaver = container.Resolve<IImageSaver>();
-            imageSaver.SaveImage(args.Destination, bitmap);
-        }
-
-        private static IContainer CreateContainer(TagsCloudArgs args)
+        private static IContainer CreateContainer(TagsCloudArgs args, AppSettings settings)
         {
             var builder = new ContainerBuilder();
 
@@ -150,8 +186,7 @@ namespace TagsCloudVisualization
             builder.RegisterType<TagsCreator>().AsSelf();
 
             builder.Register(c => new Font(args.FontFamily, args.FontSize));
-            builder.Register(c => new Colors(
-                Color.FromName(args.BackgroundColor), Color.FromName(args.ForegroundColor)));
+            builder.Register(c => new Colors(Color.FromName(args.BackgroundColor), Color.FromName(args.ForegroundColor)));
             builder.RegisterType<TagsCloudVisualizerConfiguration>();
             builder.RegisterType<TagsCloudVisualizer>();
 
@@ -159,6 +194,12 @@ namespace TagsCloudVisualization
 
             var container = builder.Build();
             return container;
+        }
+
+        private static void ExitWithMessage(string errorMessage)
+        {
+            Console.WriteLine(errorMessage);
+            Environment.Exit(1);
         }
     }
 }

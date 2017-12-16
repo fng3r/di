@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using ResultOf;
 using TagsCloudVisualization.IO;
 
 namespace TagsCloudVisualization
@@ -15,10 +16,14 @@ namespace TagsCloudVisualization
             this.statisticsMaker = statisticsMaker;
         }
 
-        public CloudTag[] CreateTags(int tagsCount)
+        public Result<CloudTag[]> CreateTags(int tagsCount)
         {
             var words = wordReader.ReadWords();
-            var mostFrequentWords = statisticsMaker.MakeStatistics(words)
+            var statisticsResult = statisticsMaker.MakeStatistics(words);
+            if (!statisticsResult.IsSuccess)
+                return Result.Fail<CloudTag[]>(statisticsResult.Error);
+
+            var mostFrequentWords = statisticsResult.Value
                 .OrderByDescending(pair => pair.Value)
                 .Take(tagsCount)
                 .ToArray();
@@ -27,7 +32,7 @@ namespace TagsCloudVisualization
 
             return mostFrequentWords
                 .Select(pair => new CloudTag(pair.Key, (double) pair.Value / largestWordCount))
-                .ToArray();
+                .ToArray().AsResult();
         }
     }
 }

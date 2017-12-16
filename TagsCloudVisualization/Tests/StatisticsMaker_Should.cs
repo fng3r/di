@@ -62,7 +62,7 @@ namespace TagsCloudVisualization.Tests
 
             Mock.Arrange(() => filter1.Filter(Arg.IsAny<Lexem>())).ReturnsMany(filterResults);
 
-            statisticsMaker.MakeStatistics(words)
+            statisticsMaker.MakeStatistics(words).Value
                 .Should().HaveCount(passFilterCount);
         }
 
@@ -71,7 +71,7 @@ namespace TagsCloudVisualization.Tests
         {
             statisticsMaker = new StatisticsMaker(lemmatizer, new[] { filter1, filter2 });
 
-            statisticsMaker.MakeStatistics(words)
+            statisticsMaker.MakeStatistics(words).Value
                 .Should().BeEmpty();
         }
 
@@ -80,7 +80,7 @@ namespace TagsCloudVisualization.Tests
         {
             words = Array.Empty<string>();
 
-            statisticsMaker.MakeStatistics(words)
+            statisticsMaker.MakeStatistics(words).Value
                 .Should().BeEmpty();
         }
 
@@ -90,7 +90,7 @@ namespace TagsCloudVisualization.Tests
             Mock.Arrange(() => lemmatizer.LemmatizeWords(words))
                 .Returns(new[] {new Lexem("слово", Arg.IsAny<PartOfSpeech>())});
 
-            statisticsMaker.MakeStatistics(words)
+            statisticsMaker.MakeStatistics(words).Value
                 .Should().ContainKey("слово").And.NotContainKey("слов");
         }
 
@@ -105,7 +105,7 @@ namespace TagsCloudVisualization.Tests
                 new Lexem("хоп", Arg.IsAny<PartOfSpeech>())
             });
 
-            statisticsMaker.MakeStatistics(words)
+            statisticsMaker.MakeStatistics(words).Value
                 .Should().HaveCount(words.Count());
         }
     }

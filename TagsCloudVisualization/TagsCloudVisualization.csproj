@@ -85,6 +85,7 @@
     <Compile Include="IO\PngSaver.cs" />
     <Compile Include="IO\TxtWordReader.cs" />
     <Compile Include="Core\TagsCreator.cs" />
+    <Compile Include="Result.cs" />
     <Compile Include="Tests\StatisticsMaker_Should.cs" />
     <Compile Include="Visualization\CloudTag.cs" />
     <Compile Include="Visualization\TagsCloudVisualizerConfiguration.cs" />

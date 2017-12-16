@@ -1,9 +1,10 @@
 ﻿using System.Collections.Generic;
+using ResultOf;
 
 namespace TagsCloudVisualization
 {
     public interface IStatisticsMaker
     {
-        Dictionary<string, int> MakeStatistics(IEnumerable<string> words);
+        Result<Dictionary<string, int>> MakeStatistics(IEnumerable<string> words);
     }
 }

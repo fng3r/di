@@ -7,34 +7,31 @@ using Ninject;
 
 namespace FractalPainting.App.Actions
 {
-	public class DragonFractalAction : IUiAction, INeed<IImageHolder>
+	public class DragonFractalAction : IUiAction
 	{
-		private IImageHolder imageHolder;
+	    private readonly IFactory dragonFactory;
+	    private readonly Func<Random, DragonSettingsGenerator> settingsGeneratorFactory;
 
-		public void SetDependency(IImageHolder dependency)
-		{
-			imageHolder = dependency;
-		}
+	    public DragonFractalAction(
+            IFactory dragonFactory, 
+            Func<Random, DragonSettingsGenerator> settingsGeneratorFactory)
+	    {
+	        this.dragonFactory = dragonFactory;
+	        this.settingsGeneratorFactory = settingsGeneratorFactory;
+	    }
 
-		public string Category => "Фракталы";
+	    public string Category => "Фракталы";
 		public string Name => "Дракон";
 		public string Description => "Дракон Хартера-Хейтуэя";
 
 		public void Perform()
 		{
-			var dragonSettings = CreateRandomSettings();
+			var dragonSettings = settingsGeneratorFactory(new Random()).Generate();
 			// редактируем настройки:
 			SettingsForm.For(dragonSettings).ShowDialog();
 			// создаём painter с такими настройками
-			var container = new StandardKernel();
-			container.Bind<IImageHolder>().ToConstant(imageHolder);
-			container.Bind<DragonSettings>().ToConstant(dragonSettings);
-			container.Get<DragonPainter>().Paint();
-		}
-
-		private static DragonSettings CreateRandomSettings()
-		{
-			return new DragonSettingsGenerator(new Random()).Generate();
+		    var dragonPainter = dragonFactory.CreaDragonPainter(dragonSettings);
+            dragonPainter.Paint();
 		}
 	}
 }
